@@ -35,44 +35,51 @@ public class Main {
     }
 
     private static void analyzeApk() {
-
+        // 设置分析APK的参数
         String[] arguments = {
-                "-process-dir", APP_PATH,
-                "-android-jars", ANDROID_JARS,
-                "-ire",
-                "-pp",
-                "-allow-phantom-refs",
-                "-w",
-                "-p", "cg", "enabled:false"
+                "-process-dir", APP_PATH, // 指定APK文件路径
+                "-android-jars", ANDROID_JARS, // 指定Android平台JAR文件路径
+                "-ire", // 启用中间表示扩展
+                "-pp", // 启用精确指针分析
+                "-allow-phantom-refs", // 允许幻影引用
+                "-w", // 启用整个程序分析
+                "-p", "cg", "enabled:false" // 禁用调用图生成
         };
 
+        // 重置Soot的全局状态
         G.reset();
 
+        // 创建自定义的SceneTransformer
         APIPrintTransformer transformer = new APIPrintTransformer();
 
-        Options.v().set_src_prec(Options.src_prec_apk);
-        Options.v().set_output_format(Options.output_format_none);
-        PackManager.v().getPack("wjtp").add(new Transform("wjtp.MethodFeatureTransformer", transformer));
+        // 设置Soot的选项
+        Options.v().set_src_prec(Options.src_prec_apk); // 设置输入源为APK
+        Options.v().set_output_format(Options.output_format_none); // 不生成输出文件
+        PackManager.v().getPack("wjtp").add(new Transform("wjtp.MethodFeatureTransformer", transformer)); // 添加自定义的转换器
 
+        // 启动Soot主程序
         soot.Main.main(arguments);
     }
 
     private static void analyzeClass() {
+        // 重置Soot的全局状态
         G.reset();
 
-        Options.v().set_prepend_classpath(true);
-        Options.v().set_allow_phantom_refs(true);
-        Options.v().set_output_format(Options.output_format_jimple);
+        // 设置Soot的选项
+        Options.v().set_prepend_classpath(true); // 在类路径前添加用户指定的类路径
+        Options.v().set_allow_phantom_refs(true); // 允许幻影引用
+        Options.v().set_output_format(Options.output_format_jimple); // 设置输出格式为Jimple
 
-        Options.v().set_soot_classpath(CLASS_DIR);
+        Options.v().set_soot_classpath(CLASS_DIR); // 设置Soot的类路径
 
-        Options.v().set_process_dir(java.util.Collections.singletonList(CLASS_DIR));
-        Scene.v().loadNecessaryClasses();
+        Options.v().set_process_dir(java.util.Collections.singletonList(CLASS_DIR)); // 设置要处理的目录
+        Scene.v().loadNecessaryClasses(); // 加载必要的类
 
         String className = CLASS_NAME;
-        SootClass sootClass = Scene.v().loadClassAndSupport(className);
-        sootClass.setApplicationClass();
+        SootClass sootClass = Scene.v().loadClassAndSupport(className); // 加载并支持指定的类
+        sootClass.setApplicationClass(); // 设置为应用类
 
+        // 检查类是否有超类
         if (sootClass.hasSuperclass()) {
             SootClass superClass = sootClass.getSuperclass();
             System.out.println(className + " extends Superclass: " + superClass.getName());
@@ -80,6 +87,7 @@ public class Main {
             System.out.println(className + " has no superclass");
         }
 
+        // 添加自定义的BodyTransformer
         PackManager.v().getPack("jtp").add(new Transform("jtp.myTransform", new BodyTransformer() {
             @Override
             protected void internalTransform(Body body, String phaseName, Map<String, String> options) {
@@ -90,6 +98,7 @@ public class Main {
             }
         }));
 
+        // 运行所有的转换包
         PackManager.v().runPacks();
     }
 }
